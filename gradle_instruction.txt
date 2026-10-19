@@ -1,0 +1,199 @@
+I. Организация сборки исходных текстов библиотеки
+https://docs.gradle.org/current/userguide/part1_gradle_init_project.html#header
+
+перехожу в папку money-library
+1) инициализация gradle (на винде по-другому не работает) 
+	./gradlew.bat init --type basic --dsl kotlin
+
+2) настройка build.gradle.kts
+plugins {
+    java
+}
+
+dependencies {
+    implementation("com.google.guava:guava:33.7.2-jre")
+}
+
+repositories {
+    mavenCentral()
+}
+2.1) настроить gradle со средой разработки, выбрать версию java
+	
+3) создать папку внутри src/main/java/com/practicalunittesting/chp03/money и туда засунуть файл Money.java
+(src/main/java - база, но у нас в файле еще куча папок указана, под неё настраиваем)
+
+
+4) ./gradlew.bat build попытка собрать
+
+5) documentation/javadoc в gradle-панели
+
+
+II. Организация сборки и выполнение тестов библиотеки
+1) создаю аналогичный путь, но вместо main будет test: src/test/java/com/practicalunittesting/chp03/money
+2) в dependencies:
+	testImplementation("org.assertj:assertj-core:3.27.7")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+2.1) в gradle.kts
+	tasks.test {
+		useJUnitPlatform()
+	}
+	обновить через ползунок сборку
+3) запуск тестов: verification -> test
+	
+
+III. Создание Maven-артефакта и выгрузка его в локальный репозиторий
+1) добавляю в plugins
+	plugins {
+    java
+    `maven-publish`
+	}
+	
+2) сама публикация в build.gradle.kts:
+	publishing {
+		publications {
+			create<MavenPublication>("maven") {
+				groupId = "com.practicalunittesting"
+				artifactId = "money-library"
+				version = "1.0"
+
+				from(components["java"])
+			}
+		}
+		repositories {
+			maven {
+				url = uri("../mvn-repo")
+			}
+		}
+	}	
+	
+3) выгрузка: publishing -> publish в gradle
+
+итоговый файл build.gradle.kts для первой части
+plugins {
+    java
+    `maven-publish`
+}
+
+dependencies {
+    implementation("com.google.guava:guava:33.7.2-jre")
+
+    testImplementation("org.assertj:assertj-core:3.27.7")
+
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+}
+
+// публикация
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "com.practicalunittesting"
+            artifactId = "money-library"
+            version = "1.0"
+
+            from(components["java"])
+        }
+    }
+    repositories {
+        maven {
+            url = uri("../mvn-repo")
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+
+tasks.test {
+    useJUnitPlatform()
+}
+_______________________________________________
+IV. Сборка Kotlin-приложения
+0) перейти в папку с Kotlin-приложением:
+	cd ..
+	cd money-app
+	
+1) ./gradlew.bat init --type basic --dsl kotlin
+
+2) выполнить структуру:
+money-app/
+├── gradle/
+│   └── wrapper/
+│       ├── gradle-wrapper.jar
+│       └── gradle-wrapper.properties
+├── gradlew
+├── gradlew.bat
+├── settings.gradle.kts
+│
+├── greeter-library/
+│   ├── build.gradle.kts
+│   └── src/
+│       └── main/
+│           └── java/
+│               └── <пакет Greeter>/
+│                   └── Greeter.java
+│
+└── app/
+    ├── build.gradle.kts
+    └── src/
+        └── main/
+            └── kotlin/
+                └── <пакет App>/
+                    └── App.kt
+3.1) плагин java в сборочном файле библиотеки greeter-library
+plugins {
+    java
+}
+
+repositories {
+    mavenCentral()
+}
+						
+3.2) плагин для app 
+plugins {
+    id("org.jetbrains.kotlin.jvm") version "1.9.22"
+}
+
+repositories {
+    mavenCentral()
+}
+https://plugins.gradle.org/plugin/org.jetbrains.kotlin.jvm/1.9.22				
+
+4.1) подключение локальной библиотеки: дополнить до этого в app файл build.gradle.kts
+	 repositories {
+		mavenCentral()
+		maven {
+			url = uri("../../mvn-repo")  // Добавили локальный репозиторий, надо на 2 уровня выше
+		}
+	}
+4.2) в этом же файле подключаем библиотеки локальные:
+dependencies {
+    implementation("com.practicalunittesting:money-library:1.0")
+	implementation(project(":greeter-library"))
+}	
+
+5) конфигурация двух частей:
+	в файле settings.gradle.kts:
+	rootProject.name = "money-app"
+	include("greeter-library")
+	include("app")
+
+	
+	
+V. Запуск Приложения через gradle
+1) дополнить в app в build.gradle.kts:
+plugins {
+    id("org.jetbrains.kotlin.jvm") version "2.4.21"
+    application
+}
+
+application {
+    mainClass = "money.app.App"
+}
+	
+версии java во всех папках одинаковые желательно бы!!!	
+	
